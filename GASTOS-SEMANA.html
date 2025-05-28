@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gasto Semanal</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <div class="contenedor">
+        <h1>Gasto Semanal</h1>
+        <div id="presupuestoSeccion">
+            <label for="presupuesto">Presupuesto inicial:</label>
+            <input type="number" id="presupuesto" placeholder="Ingrese su presupuesto inicial">
+            <button id="guardarPresupuesto">Guardar</button>
+        </div>
+        <div id="gastosSeccion" style="display:none;">
+            <h2>Añade tus gastos aquí</h2>
+            <label for="gasto">Gasto:</label>
+            <input type="text" id="gasto" placeholder="Nombre Gasto">
+            <label for="cantidad">Cantidad:</label>
+            <input type="number" id="cantidad" placeholder="Cantidad en $">
+            <button id="agregar">Agregar</button>
+        </div>
+        <div id="listadoSeccion" style="display:none;">
+            <h2>Listado</h2>
+            <ul id="listado"></ul>
+            <div>
+                <div>Presupuesto: <span id="totalPresupuesto">0.00</span></div>
+                <div id="restante">Restante: <span id="totalRestante">0.00</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const presupuestoInput = document.getElementById('presupuesto');
+            const guardarBtn = document.getElementById('guardarPresupuesto');
+            const gastoInput = document.getElementById('gasto');
+            const cantidadInput = document.getElementById('cantidad');
+            const agregarBtn = document.getElementById('agregar');
+            const listado = document.getElementById('listado');
+            const totalPresupuesto = document.getElementById('totalPresupuesto');
+            const totalRestante = document.getElementById('totalRestante');
+            const gastosSeccion = document.getElementById('gastosSeccion');
+            const listadoSeccion = document.getElementById('listadoSeccion');
+            const presupuestoSeccion = document.getElementById('presupuestoSeccion');
+
+            let restante = 0;
+
+            function formatoMoneda(valor) {
+                return valor.toLocaleString('es-CO', { style: 'currency', currency: 'COP' });
+            }
+
+            guardarBtn.addEventListener('click', function() {
+                const presupuestoInicial = parseFloat(presupuestoInput.value);
+
+                if (isNaN(presupuestoInicial) || presupuestoInicial <= 0) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Por favor ingresa un presupuesto válido mayor que cero.'
+                    });
+                    return;
+                }
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Presupuesto guardado',
+                    text: `Tu presupuesto inicial es ${formatoMoneda(presupuestoInicial)}`
+                });
+
+                presupuestoSeccion.style.display = 'none';
+                gastosSeccion.style.display = 'block';
+                listadoSeccion.style.display = 'block';
+
+                totalPresupuesto.textContent = formatoMoneda(presupuestoInicial);
+                restante = presupuestoInicial;
+                totalRestante.textContent = formatoMoneda(restante);
+            });
+
+            agregarBtn.addEventListener('click', function() {
+                const gasto = gastoInput.value.trim();
+                const cantidad = parseFloat(cantidadInput.value);
+
+                if (gasto === '' || isNaN(cantidad) || cantidad <= 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Advertencia',
+                        text: 'Por favor ingresa un gasto y una cantidad válida.'
+                    });
+                    return;
+                }
+
+                if (cantidad > restante) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'El gasto excede el presupuesto restante.'
+                    });
+                    return;
+                }
+
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span class="gasto-nombre">${gasto}</span> <div class="gasto-cantidad">${formatoMoneda(cantidad)}</div>
+                    <button class="editar-btn">Editar</button>
+                    <button class="borrar-btn">Borrar</button>
+                `;
+                listado.appendChild(li);
+                actualizarRestante(cantidad);
+
+                gastoInput.value = '';
+                cantidadInput.value = '';
+            });
+
+            listado.addEventListener('click', function(e) {
+                if (e.target.classList.contains('borrar-btn')) {
+                    const cantidad = parseFloat(e.target.previousElementSibling.previousElementSibling.textContent.replace(/[^\d,-]/g, ''));
+                    e.target.parentElement.remove();
+                    actualizarRestante(-cantidad);
+                }
+
+                if (e.target.classList.contains('editar-btn')) {
+                    const li = e.target.parentElement;
+                    const gastoNombre = li.querySelector('.gasto-nombre');
+                    const gastoCantidad = li.querySelector('.gasto-cantidad');
+                    const cantidad = parseFloat(gastoCantidad.textContent.replace(/[^\d,-]/g, ''));
+
+                    gastoInput.value = gastoNombre.textContent;
+                    cantidadInput.value = cantidad;
+
+                    actualizarRestante(-cantidad);
+                    li.remove();
+                }
+            });
+
+            function actualizarRestante(cantidad) {
+                restante -= cantidad;
+                restante = Math.max(restante, 0);
+                totalRestante.textContent = formatoMoneda(restante);
+
+                const presupuestoInicial = parseFloat(totalPresupuesto.textContent.replace(/[^\d,-]/g, ''));
+                const porcentajeRestante = (restante / presupuestoInicial) * 100;
+
+                totalRestante.className = ''; 
+
+            if (porcentajeRestante <= 25) {
+               totalRestante.classList.add('color-rojo');
+         } else if (porcentajeRestante <= 50) {
+               totalRestante.classList.add('color-naranja');
+         } else if (porcentajeRestante <= 75) {
+               totalRestante.classList.add('color-amarillo');
+         } else {
+               totalRestante.classList.add('color-verde');
+    }
+}
+
+        });
+    </script>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background-image: url(https://png.pngtree.com/background/20210716/original/pngtree-red-comic-background-with-rays-and-halftone-picture-image_1389423.jpg);
+        background-repeat: no-repeat;
+        background-size: 100%;
+        color: #fff;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+
+    .contenedor {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        color: #333;
+        width: 80%;
+        max-width: 800px;
+    }
+
+    h1 {
+        text-align: center;
+    }
+
+    label {
+        display: block;
+        margin: 10px 0 5px;
+    }
+
+    input, button {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        box-sizing: border-box;
+    }
+
+    button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        text-align: center;
+        padding: 8px 12px;
+    }
+
+    button:hover {
+        background-color: #0056b3;
+    }
+
+    ul {
+        list-style: none;
+        padding: 0;
+    }
+
+    li {
+        background: #f1f1f1;
+        margin-bottom: 10px;
+        padding: 10px;
+        border-radius: 5px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .borrar-btn, .editar-btn {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        padding: 5px 8px;
+        margin-left: 5px;
+    }
+
+    .editar-btn {
+        background-color: #007bff;
+    }
+
+    .borrar-btn:hover {
+        background-color: #c82333;
+    }
+
+    .editar-btn:hover {
+        background-color: #0056b3;
+    }
+
+    #restante {
+        background-color: #d4edda;
+        color: #155724;
+        transition: background-color 0.3s, color 0.3s;
+    }
+
+    .color-rojo {
+        background-color: #e74c3c;
+        color: #fff;
+    }
+
+    .color-naranja {
+        background-color: #FF8F00;
+        color: #fff;
+    }
+
+    .color-amarillo {
+        background-color: #FFD54F;
+        color: #333;
+    }
+
+    .color-verde {
+        background-color: #d4edda;
+        color: #155724;
+    }
+</style>
+</body>
+</html>
